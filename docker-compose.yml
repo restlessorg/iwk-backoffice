@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "${PG_PORT}:5432"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${PG_DB}
+      POSTGRES_USER: ${PG_DBUSER}
+      POSTGRES_PASSWORD: ${PG_DBPASS}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pg_data:
