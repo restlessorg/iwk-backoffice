@@ -21,12 +21,11 @@ import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.restless.iwkbackoffice.util.ParsingUtils.*;
 
 @Slf4j
 @Service
@@ -40,14 +39,6 @@ public class CsvImportService implements ImportService {
             .setHeader("id", "longitude", "latitude", "timestamp", "subtotal")
             .setSkipHeaderRecord(true)
             .get();
-
-    private static final DateTimeFormatter CSV_TS_FORMATTER =
-            new DateTimeFormatterBuilder()
-                    .appendPattern("yyyy-MM-dd HH:mm:ss")
-                    .optionalStart()
-                    .appendFraction(ChronoField.NANO_OF_SECOND, 1, 9, true)
-                    .optionalEnd()
-                    .toFormatter();
 
     private static final int BATCH_SIZE = 500;
 
@@ -114,39 +105,5 @@ public class CsvImportService implements ImportService {
         LocalDateTime ts = parseTimestampRequired(r.get(3), "timestamp");
         BigDecimal subtotal = parseBigDecimalRequired(r.get(4), "subtotal");
         return new OrderEntity(longitude, latitude, ts, subtotal);
-    }
-
-    private Double parseDoubleRequired(String raw, String field) {
-        String s = raw == null ? "" : raw.trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Missing required field: " + field);
-        try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid " + field + ": " + raw, e);
-        }
-    }
-
-    private LocalDateTime parseTimestampRequired(String raw, String field) {
-        String s = raw == null ? "" : raw.trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Missing required field: " + field);
-
-        try {
-            return LocalDateTime.parse(s, CSV_TS_FORMATTER);
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "Invalid " + field + ": " + raw + " (expected 'yyyy-MM-dd HH:mm:ss[.fffffffff]')",
-                    e
-            );
-        }
-    }
-
-    private BigDecimal parseBigDecimalRequired(String raw, String field) {
-        String s = raw == null ? "" : raw.trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Missing required field: " + field);
-        try {
-            return new BigDecimal(s);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid " + field + ": " + raw, e);
-        }
     }
 }
