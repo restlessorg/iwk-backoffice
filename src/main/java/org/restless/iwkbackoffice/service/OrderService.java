@@ -4,17 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
-import org.restless.iwkbackoffice.domain.response.*;
+import org.restless.iwkbackoffice.domain.response.FilterLimits;
+import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
+import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
+import org.restless.iwkbackoffice.domain.response.OrderLocation;
+import org.restless.iwkbackoffice.domain.response.OrderResponse;
+import org.restless.iwkbackoffice.domain.response.PageData;
+import org.restless.iwkbackoffice.exception.BadRequestException;
 import org.restless.iwkbackoffice.exception.NotFoundException;
 import org.restless.iwkbackoffice.repository.OrderJdbcRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
@@ -22,11 +24,12 @@ public class OrderService {
     private final OrderJdbcRepository repository;
 
     public OrderCreateResponse createOrder(OrderCreateRequest request) {
+        validateCoordinates(request.longitude(), request.latitude());
         Long createdOrderId = repository.createOrder(new OrderEntity(
                 request.longitude(),
                 request.latitude(),
                 LocalDateTime.now(),
-                BigDecimal.valueOf(request.subTotal())
+                request.subTotal()
         ));
         return new OrderCreateResponse(createdOrderId);
     }
@@ -49,5 +52,14 @@ public class OrderService {
 
     public List<OrderLocation> getOrdersLocations() {
         return repository.getOrdersLocations();
+    }
+
+    private void validateCoordinates(Double longitude, Double latitude) {
+        if (longitude < -180 || longitude > 180) {
+            throw new BadRequestException("longitude must be between -180 and 180");
+        }
+        if (latitude < -90 || latitude > 90) {
+            throw new BadRequestException("latitude must be between -90 and 90");
+        }
     }
 }

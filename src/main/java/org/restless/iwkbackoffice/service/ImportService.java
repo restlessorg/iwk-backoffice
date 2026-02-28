@@ -8,6 +8,9 @@ import org.apache.commons.csv.CSVRecord;
 import org.jspecify.annotations.NonNull;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.response.OrdersImportResponse;
+import org.restless.iwkbackoffice.domain.tax.CalculatedOrderTaxes;
+import org.restless.iwkbackoffice.domain.tax.JurisdictionDetails;
+import org.restless.iwkbackoffice.domain.tax.JurisdictionType;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -18,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -34,6 +36,7 @@ import static org.restless.iwkbackoffice.util.ParsingUtils.*;
 @RequiredArgsConstructor
 public class ImportService {
     private final JdbcTemplate jdbcTemplate;
+    private final OrderTaxCalculator orderTaxCalculator;
 
     private static final CSVFormat FORMAT = CSVFormat.DEFAULT
             .builder()
@@ -109,35 +112,24 @@ public class ImportService {
                  AND ST_Covers(j.coordinates, ST_SetSRID(ST_MakePoint(i.longitude, i.latitude), 4326))
                 """.formatted(String.join(",", sqlParts));
 
-        Map<OrderEntity, List<JurisdictionDetails>> orderJurisdictions = new HashMap<>();
+        Map<Long, OrderEntity> ordersById = batch.stream()
+                .collect(Collectors.toMap(OrderEntity::getId, order -> order));
+        Map<OrderEntity, List<JurisdictionDetails>> orderJurisdictions = new LinkedHashMap<>();
         jdbcTemplate.query(sql, rs -> {
             Long orderId = rs.getObject("order_id", Long.class);
-            Long jurisdictionId = rs.getObject("id", Long.class);
-            JurisdictionType jurisdictionType = JurisdictionType.valueOf(rs.getString("type"));
-            BigDecimal stateRate = rs.getBigDecimal("state_rate");
-            BigDecimal countyRate = rs.getBigDecimal("county_rate");
-            BigDecimal cityRate = rs.getBigDecimal("city_rate");
-            BigDecimal specialRate = rs.getBigDecimal("special_rate");
-
-            OrderEntity order = batch.stream()
-                    .filter(o -> o.getId().equals(orderId))
-                    .findAny()
-                    .get();
-            JurisdictionDetails jurisdictionDetails = new JurisdictionDetails(jurisdictionId, jurisdictionType, stateRate, countyRate, cityRate, specialRate);
+            OrderEntity order = ordersById.get(orderId);
+            JurisdictionDetails jurisdictionDetails = mapJurisdictionDetails(rs);
             orderJurisdictions.computeIfAbsent(order, ignored -> new ArrayList<>()).add(jurisdictionDetails);
         }, params.toArray());
 
-        Map<OrderEntity, List<JurisdictionDetails>> oj = orderJurisdictions.entrySet().stream()
-                .filter(e -> e.getValue() != null)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        List<OrderEntity> ord = new ArrayList<>(oj.keySet());
+        List<OrderEntity> ordersToPersist = new ArrayList<>(orderJurisdictions.keySet());
 
         int insertedOrders = Arrays.stream(jdbcTemplate.batchUpdate(
                 "INSERT INTO orders (id,longitude,latitude,ts,subtotal) VALUES (?,?,?,?,?)",
                 new BatchPreparedStatementSetter() {
                     @Override
                     public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
-                        OrderEntity order = ord.get(i);
+                        OrderEntity order = ordersToPersist.get(i);
                         ps.setLong(1, order.getId());
                         ps.setDouble(2, order.getLongitude());
                         ps.setDouble(3, order.getLatitude());
@@ -147,7 +139,7 @@ public class ImportService {
 
                     @Override
                     public int getBatchSize() {
-                        return ord.size();
+                        return ordersToPersist.size();
                     }
                 }
         )).sum();
@@ -157,43 +149,20 @@ public class ImportService {
                 new BatchPreparedStatementSetter() {
                     @Override
                     public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
-                        OrderEntity order = ord.get(i);
+                        OrderEntity order = ordersToPersist.get(i);
                         List<JurisdictionDetails> jurisdictionDetails = orderJurisdictions.get(order);
-                        Long[] jIds = jurisdictionDetails.stream()
-                                .map(JurisdictionDetails::id)
-                                .toArray(Long[]::new);
-                        jurisdictionDetails.sort((o1, o2) -> {
-                            if (o1.type() == o2.type()) {
-                                return 0;
-                            }
-                            if (o1.type() == JurisdictionType.CITY) {
-                                return -1;
-                            }
-                            return 1;
-                        });
-                        JurisdictionDetails prioritizedJurisdiction = jurisdictionDetails.getFirst();
-
-                        BigDecimal compositeTaxRate = prioritizedJurisdiction.stateRate
-                                .add(prioritizedJurisdiction.countyRate)
-                                .add(prioritizedJurisdiction.cityRate)
-                                .add(prioritizedJurisdiction.specialRate);
-
-                        BigDecimal taxAmount = order.getSubtotal()
-                                .multiply(compositeTaxRate)
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-                        BigDecimal totalAmount = order.getSubtotal().add(taxAmount);
+                        CalculatedOrderTaxes taxes = orderTaxCalculator.calculate(order.getSubtotal(), jurisdictionDetails);
 
                         ps.setLong(1, order.getId());
-                        ps.setArray(2, ps.getConnection().createArrayOf("bigint", jIds));
-                        ps.setBigDecimal(3, compositeTaxRate);
-                        ps.setBigDecimal(4, taxAmount);
-                        ps.setBigDecimal(5, totalAmount);
+                        ps.setArray(2, ps.getConnection().createArrayOf("bigint", taxes.jurisdictionIds().toArray(Long[]::new)));
+                        ps.setBigDecimal(3, taxes.compositeTaxRate());
+                        ps.setBigDecimal(4, taxes.taxAmount());
+                        ps.setBigDecimal(5, taxes.totalAmount());
                     }
 
                     @Override
                     public int getBatchSize() {
-                        return ord.size();
+                        return ordersToPersist.size();
                     }
                 }
         );
@@ -210,13 +179,14 @@ public class ImportService {
         return new OrderEntity(longitude, latitude, ts, subtotal);
     }
 
-    public record JurisdictionDetails(
-            Long id, JurisdictionType type, BigDecimal stateRate, BigDecimal countyRate, BigDecimal cityRate,
-            BigDecimal specialRate
-    ) {
-    }
-
-    public enum JurisdictionType {
-        COUNTY, CITY
+    private JurisdictionDetails mapJurisdictionDetails(java.sql.ResultSet rs) throws SQLException {
+        return new JurisdictionDetails(
+                rs.getObject("id", Long.class),
+                JurisdictionType.valueOf(rs.getString("type")),
+                rs.getBigDecimal("state_rate"),
+                rs.getBigDecimal("county_rate"),
+                rs.getBigDecimal("city_rate"),
+                rs.getBigDecimal("special_rate")
+        );
     }
 }
