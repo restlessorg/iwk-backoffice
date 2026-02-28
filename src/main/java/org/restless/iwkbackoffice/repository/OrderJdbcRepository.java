@@ -70,7 +70,7 @@ public class OrderJdbcRepository {
         }, order.getId(), order.getLongitude(), order.getLatitude());
 
         if (jurisdictionDetails.isEmpty()) {
-            throw new BadRequestException("No tax jurisdiction found for order coordinates");
+            throw new BadRequestException("Order was placed outside of NY state");
         }
 
         jdbcTemplate.update(
