@@ -8,12 +8,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@Setter
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "orders")
 public class OrderEntity {
-    @Setter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

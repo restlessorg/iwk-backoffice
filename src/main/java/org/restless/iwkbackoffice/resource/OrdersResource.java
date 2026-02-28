@@ -1,14 +1,14 @@
 package org.restless.iwkbackoffice.resource;
 
 import lombok.RequiredArgsConstructor;
+import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
+import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
 import org.restless.iwkbackoffice.domain.response.OrdersImportResponse;
 import org.restless.iwkbackoffice.service.ImportService;
+import org.restless.iwkbackoffice.service.OrderService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/orders")
 public class OrdersResource {
     private final ImportService importService;
+    private final OrderService orderService;
 
     @PostMapping(
             path = "/import",
@@ -24,5 +25,13 @@ public class OrdersResource {
     )
     public ResponseEntity<OrdersImportResponse> importOrders(@RequestPart("file") MultipartFile file) {
         return ResponseEntity.ok(importService.importOrders(file));
+    }
+
+    @PostMapping(
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<OrderCreateResponse> createOrder(@RequestBody OrderCreateRequest request) {
+        return ResponseEntity.ok(orderService.createOrder(request));
     }
 }

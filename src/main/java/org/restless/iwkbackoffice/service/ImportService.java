@@ -210,13 +210,13 @@ public class ImportService {
         return new OrderEntity(longitude, latitude, ts, subtotal);
     }
 
-    private record JurisdictionDetails(
+    public record JurisdictionDetails(
             Long id, JurisdictionType type, BigDecimal stateRate, BigDecimal countyRate, BigDecimal cityRate,
             BigDecimal specialRate
     ) {
     }
 
-    private enum JurisdictionType {
+    public enum JurisdictionType {
         COUNTY, CITY
     }
 }
