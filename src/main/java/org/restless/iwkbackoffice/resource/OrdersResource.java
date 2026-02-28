@@ -2,6 +2,7 @@ package org.restless.iwkbackoffice.resource;
 
 import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
+import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
 import org.restless.iwkbackoffice.domain.response.OrdersImportResponse;
 import org.restless.iwkbackoffice.service.ImportService;
@@ -33,5 +34,10 @@ public class OrdersResource {
     )
     public ResponseEntity<OrderCreateResponse> createOrder(@RequestBody OrderCreateRequest request) {
         return ResponseEntity.ok(orderService.createOrder(request));
+    }
+
+    @GetMapping("/filterlimits")
+    public ResponseEntity<FilterLimits> getFilterLimits() {
+        return ResponseEntity.ok(orderService.getFilterLimits());
     }
 }

@@ -2,6 +2,7 @@ package org.restless.iwkbackoffice.repository;
 
 import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
+import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.service.ImportService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -10,9 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Repository
 @RequiredArgsConstructor
@@ -104,5 +105,41 @@ public class OrderJdbcRepository {
         });
 
         return order.getId();
+    }
+
+    public FilterLimits getFilterLimits() {
+        AtomicReference<BigDecimal> minsubtotal = new AtomicReference<>();
+        AtomicReference<BigDecimal> maxsubtotal = new AtomicReference<>();
+        AtomicReference<BigDecimal> mintaxamount = new AtomicReference<>();
+        AtomicReference<BigDecimal> maxtaxamount = new AtomicReference<>();
+        AtomicReference<BigDecimal> mintaxrate = new AtomicReference<>();
+        AtomicReference<BigDecimal> maxtaxrate = new AtomicReference<>();
+        AtomicReference<BigDecimal> mintotalamount = new AtomicReference<>();
+        AtomicReference<BigDecimal> maxtotalamount = new AtomicReference<>();
+        jdbcTemplate.query("select coalesce(min(o.subtotal), -1)            as minsubtotal," +
+                "       coalesce(max(o.subtotal), -1)            as maxsubtotal," +
+                "       coalesce(min(od.tax_amount), -1)         as mintaxamount," +
+                "       coalesce(max(od.tax_amount), -1)         as maxtaxamount," +
+                "       coalesce(min(od.composite_tax_rate), -1) as mintaxrate," +
+                "       coalesce(max(od.composite_tax_rate), -1) as maxtaxrate," +
+                "       coalesce(min(od.total_amount), -1)       as mintotalamount," +
+                "       coalesce(max(od.total_amount), -1)       as maxtotalamount" +
+                " from orders o" +
+                "         join order_details od on o.id = od.order_id", rs -> {
+            minsubtotal.set(rs.getBigDecimal("minsubtotal"));
+            maxsubtotal.set(rs.getBigDecimal("maxsubtotal"));
+            mintaxamount.set(rs.getBigDecimal("mintaxamount"));
+            maxtaxamount.set(rs.getBigDecimal("maxtaxamount"));
+            mintaxrate.set(rs.getBigDecimal("mintaxrate"));
+            maxtaxrate.set(rs.getBigDecimal("maxtaxrate"));
+            mintotalamount.set(rs.getBigDecimal("mintotalamount"));
+            maxtotalamount.set(rs.getBigDecimal("maxtotalamount"));
+        });
+        return new FilterLimits(
+                List.of(minsubtotal.get().doubleValue(), maxsubtotal.get().doubleValue()),
+                List.of(mintaxamount.get().doubleValue(), maxtaxamount.get().doubleValue()),
+                List.of(mintaxrate.get().doubleValue(), maxtaxrate.get().doubleValue()),
+                List.of(mintotalamount.get().doubleValue(), maxtotalamount.get().doubleValue())
+        );
     }
 }

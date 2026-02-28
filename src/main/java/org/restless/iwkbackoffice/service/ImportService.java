@@ -38,7 +38,7 @@ public class ImportService {
     private static final CSVFormat FORMAT = CSVFormat.DEFAULT
             .builder()
             .setTrim(true)
-            .setHeader("id", "longitude", "latitude", "timestamp", "subtotal")
+            .setHeader("id", "longitude", "latitude", "timestamp", "subTotal")
             .setSkipHeaderRecord(true)
             .get();
 
@@ -206,7 +206,7 @@ public class ImportService {
         Double longitude = parseDoubleRequired(r.get(1), "longitude");
         Double latitude = parseDoubleRequired(r.get(2), "latitude");
         LocalDateTime ts = parseTimestampRequired(r.get(3), "timestamp");
-        BigDecimal subtotal = parseBigDecimalRequired(r.get(4), "subtotal");
+        BigDecimal subtotal = parseBigDecimalRequired(r.get(4), "subTotal");
         return new OrderEntity(longitude, latitude, ts, subtotal);
     }
 
