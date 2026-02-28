@@ -1,19 +1,19 @@
 package org.restless.iwkbackoffice.domain.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "orders")
 public class OrderEntity {
+    @Setter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -35,5 +35,10 @@ public class OrderEntity {
         this.latitude = latitude;
         this.ts = ts;
         this.subtotal = subtotal;
+    }
+
+    @Override
+    public String toString() {
+        return id.toString();
     }
 }
