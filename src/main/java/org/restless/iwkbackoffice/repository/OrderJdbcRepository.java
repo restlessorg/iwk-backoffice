@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
+import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
 import org.restless.iwkbackoffice.domain.response.OrderResponse;
 import org.restless.iwkbackoffice.domain.response.PageData;
 import org.restless.iwkbackoffice.service.ImportService;
@@ -25,6 +26,10 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public class OrderJdbcRepository {
     private final JdbcTemplate jdbcTemplate;
+
+    private static final String COUNTRY_NAME = "USA";
+    private static final String STATE_NAME = "New York";
+    private static final String MCTD_NAME = "MCTD (Metropolitan Commuter Transportation District)";
     private static final DateTimeFormatter ORDER_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
 
     @Transactional
@@ -150,6 +155,89 @@ public class OrderJdbcRepository {
         );
     }
 
+    public OrderDetailsResponse getById(Long id) {
+        List<OrderDetailsRow> rows = jdbcTemplate.query(
+                """
+                        SELECT o.id,
+                               o.ts,
+                               o.longitude,
+                               o.latitude,
+                               o.subtotal,
+                               od.total_amount,
+                               od.composite_tax_rate,
+                               od.tax_amount,
+                               j.type,
+                               j.name,
+                               j.state_rate,
+                               j.county_rate,
+                               j.city_rate,
+                               j.special_rate
+                        FROM orders o
+                        JOIN order_details od ON o.id = od.order_id
+                        JOIN tax_jurisdictions j ON j.id = ANY (od.jurisdictions)
+                        WHERE o.id = ?
+                        ORDER BY CASE WHEN j.type = 'CITY' THEN 0 ELSE 1 END, j.id
+                        """,
+                (rs, rowNum) -> new OrderDetailsRow(
+                        rs.getLong("id"),
+                        formatTimestamp(rs.getTimestamp("ts")),
+                        rs.getDouble("longitude"),
+                        rs.getDouble("latitude"),
+                        rs.getBigDecimal("subtotal").doubleValue(),
+                        rs.getBigDecimal("total_amount").doubleValue(),
+                        rs.getBigDecimal("composite_tax_rate").doubleValue(),
+                        rs.getBigDecimal("tax_amount").doubleValue(),
+                        rs.getString("type"),
+                        rs.getString("name"),
+                        rs.getBigDecimal("state_rate").doubleValue(),
+                        rs.getBigDecimal("county_rate").doubleValue(),
+                        rs.getBigDecimal("city_rate").doubleValue(),
+                        rs.getBigDecimal("special_rate").doubleValue()
+                ),
+                id
+        );
+
+        if (rows.isEmpty()) {
+            return null;
+        }
+
+        OrderDetailsRow prioritizedRow = rows.getFirst();
+        String county = null;
+        String city = null;
+        String special = null;
+        for (OrderDetailsRow row : rows) {
+            if ("COUNTY".equals(row.type())) {
+                county = row.name();
+            }
+            if ("CITY".equals(row.type())) {
+                city = row.name();
+            }
+            if (row.specialRate != null && row.specialRate != 0.0) {
+                special = MCTD_NAME;
+            }
+        }
+
+        return new OrderDetailsResponse(
+                prioritizedRow.id(),
+                prioritizedRow.timestamp(),
+                prioritizedRow.longitude(),
+                prioritizedRow.latitude(),
+                prioritizedRow.subTotal(),
+                prioritizedRow.totalAmount(),
+                prioritizedRow.taxRate(),
+                prioritizedRow.stateRate(),
+                prioritizedRow.countyRate(),
+                prioritizedRow.cityRate(),
+                prioritizedRow.specialRate(),
+                prioritizedRow.taxAmount(),
+                COUNTRY_NAME,
+                STATE_NAME,
+                county,
+                city,
+                special
+        );
+    }
+
     public PageData<OrderResponse> findOrders(OrdersFilter filter, int page, int perPage) {
         int safePerPage = Math.max(perPage, 1);
         int safePage = Math.max(page, 0);
@@ -178,7 +266,7 @@ public class OrderJdbcRepository {
         }
 
         baseQuery.append("""
-
+                
                   AND o.subtotal BETWEEN ? AND ?
                   AND od.tax_amount BETWEEN ? AND ?
                   AND od.composite_tax_rate BETWEEN ? AND ?
@@ -243,5 +331,23 @@ public class OrderJdbcRepository {
     private String formatTimestamp(Timestamp timestamp) {
         LocalDateTime value = timestamp.toLocalDateTime();
         return ORDER_TIMESTAMP_FORMAT.format(value);
+    }
+
+    private record OrderDetailsRow(
+            Long id,
+            String timestamp,
+            Double longitude,
+            Double latitude,
+            Double subTotal,
+            Double totalAmount,
+            Double taxRate,
+            Double taxAmount,
+            String type,
+            String name,
+            Double stateRate,
+            Double countyRate,
+            Double cityRate,
+            Double specialRate
+    ) {
     }
 }

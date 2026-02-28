@@ -4,15 +4,15 @@ import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
-import org.restless.iwkbackoffice.domain.response.FilterLimits;
-import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
-import org.restless.iwkbackoffice.domain.response.OrderResponse;
-import org.restless.iwkbackoffice.domain.response.PageData;
+import org.restless.iwkbackoffice.domain.response.*;
 import org.restless.iwkbackoffice.repository.OrderJdbcRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
 @RequiredArgsConstructor
@@ -35,5 +35,13 @@ public class OrderService {
 
     public PageData<OrderResponse> findOrders(OrdersFilter ordersFilter, int page, int perPage) {
         return repository.findOrders(ordersFilter, page, perPage);
+    }
+
+    public OrderDetailsResponse getById(Long id) {
+        OrderDetailsResponse order = repository.getById(id);
+        if (order == null) {
+            throw new ResponseStatusException(NOT_FOUND, "Order not found: " + id);
+        }
+        return order;
     }
 }

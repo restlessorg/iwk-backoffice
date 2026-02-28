@@ -23,7 +23,7 @@ public class OrdersResource {
     private final ImportService importService;
     private final OrderService orderService;
 
-    private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+    private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @PostMapping(
             path = "/import",
@@ -72,6 +72,11 @@ public class OrdersResource {
         PageData<OrderResponse> orders = orderService.findOrders(ordersFilter, page, perPage);
 
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/{id}")
+    private ResponseEntity<OrderDetailsResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getById(id));
     }
 
     private LocalDate parseDateBound(String[] dates, int index) {
