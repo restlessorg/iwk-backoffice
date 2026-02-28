@@ -5,6 +5,7 @@ import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
+import org.restless.iwkbackoffice.domain.response.OrderLocation;
 import org.restless.iwkbackoffice.domain.response.OrderResponse;
 import org.restless.iwkbackoffice.domain.response.PageData;
 import org.restless.iwkbackoffice.exception.BadRequestException;
@@ -236,6 +237,22 @@ public class OrderJdbcRepository {
                 county,
                 city,
                 special
+        );
+    }
+
+    public List<OrderLocation> getOrdersLocations() {
+        return jdbcTemplate.query(
+                """
+                        SELECT o.id,
+                               o.longitude,
+                               o.latitude
+                        FROM orders o
+                        """,
+                (rs, rowNum) -> new OrderLocation(
+                        rs.getLong("id"),
+                        rs.getDouble("longitude"),
+                        rs.getDouble("latitude")
+                )
         );
     }
 

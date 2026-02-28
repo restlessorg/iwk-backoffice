@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -44,5 +45,9 @@ public class OrderService {
             throw new NotFoundException("Order %d not found".formatted(id));
         }
         return order;
+    }
+
+    public List<OrderLocation> getOrdersLocations() {
+        return repository.getOrdersLocations();
     }
 }

@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -77,6 +78,11 @@ public class OrdersResource {
     @GetMapping("/{id}")
     private ResponseEntity<OrderDetailsResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.getById(id));
+    }
+
+    @GetMapping("/map")
+    private ResponseEntity<List<OrderLocation>> getOrdersLocations() {
+        return ResponseEntity.ok(orderService.getOrdersLocations());
     }
 
     private LocalDate parseDateBound(String[] dates, int index) {
