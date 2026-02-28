@@ -3,8 +3,11 @@ package org.restless.iwkbackoffice.service;
 import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
+import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
+import org.restless.iwkbackoffice.domain.response.OrderResponse;
+import org.restless.iwkbackoffice.domain.response.PageData;
 import org.restless.iwkbackoffice.repository.OrderJdbcRepository;
 import org.springframework.stereotype.Service;
 
@@ -28,5 +31,9 @@ public class OrderService {
 
     public FilterLimits getFilterLimits() {
         return repository.getFilterLimits();
+    }
+
+    public PageData<OrderResponse> findOrders(OrdersFilter ordersFilter, int page, int perPage) {
+        return repository.findOrders(ordersFilter, page, perPage);
     }
 }

@@ -2,7 +2,10 @@ package org.restless.iwkbackoffice.repository;
 
 import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
+import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
+import org.restless.iwkbackoffice.domain.response.OrderResponse;
+import org.restless.iwkbackoffice.domain.response.PageData;
 import org.restless.iwkbackoffice.service.ImportService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -11,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -19,6 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public class OrderJdbcRepository {
     private final JdbcTemplate jdbcTemplate;
+    private static final DateTimeFormatter ORDER_TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
     @Transactional
     public Long createOrder(OrderEntity order) {
@@ -141,5 +148,94 @@ public class OrderJdbcRepository {
                 List.of(mintaxrate.get().doubleValue(), maxtaxrate.get().doubleValue()),
                 List.of(mintotalamount.get().doubleValue(), maxtotalamount.get().doubleValue())
         );
+    }
+
+    public PageData<OrderResponse> findOrders(OrdersFilter filter, int page, int perPage) {
+        int safePerPage = Math.max(perPage, 1);
+        int safePage = Math.max(page, 1);
+        int offset = (safePage - 1) * safePerPage;
+
+        String baseQuery = """
+                FROM orders o
+                JOIN order_details od ON o.id = od.order_id
+                WHERE (? = '' OR CAST(o.id AS TEXT) ILIKE ?)
+                  AND o.ts >= ?
+                  AND o.ts <= ?
+                  AND o.subtotal BETWEEN ? AND ?
+                  AND od.tax_amount BETWEEN ? AND ?
+                  AND od.composite_tax_rate BETWEEN ? AND ?
+                  AND od.total_amount BETWEEN ? AND ?
+                """;
+
+        String normalizedQuery = filter.query() == null ? "" : filter.query().trim();
+        String queryPattern = "%" + normalizedQuery + "%";
+        Timestamp dateFrom = Timestamp.valueOf(filter.date().getFrom().atStartOfDay());
+        Timestamp dateToInclusive = Timestamp.valueOf(filter.date().getTo().atTime(LocalTime.MAX));
+
+        Object[] params = {
+                normalizedQuery,
+                queryPattern,
+                dateFrom,
+                dateToInclusive,
+                BigDecimal.valueOf(filter.subTotal().getFrom()),
+                BigDecimal.valueOf(filter.subTotal().getTo()),
+                BigDecimal.valueOf(filter.taxAmount().getFrom()),
+                BigDecimal.valueOf(filter.taxAmount().getTo()),
+                BigDecimal.valueOf(filter.taxRate().getFrom()),
+                BigDecimal.valueOf(filter.taxRate().getTo()),
+                BigDecimal.valueOf(filter.totalAmount().getFrom()),
+                BigDecimal.valueOf(filter.totalAmount().getTo())
+        };
+
+        Integer totalElements = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) " + baseQuery,
+                Integer.class,
+                params
+        );
+
+        List<OrderResponse> data = jdbcTemplate.query(
+                """
+                        SELECT o.id,
+                               o.ts,
+                               o.latitude,
+                               o.longitude,
+                               o.subtotal,
+                               od.composite_tax_rate,
+                               od.tax_amount,
+                               od.total_amount
+                        """ + baseQuery + """
+                        ORDER BY o.ts DESC, o.id DESC
+                        LIMIT ? OFFSET ?
+                        """,
+                (rs, rowNum) -> new OrderResponse(
+                        rs.getLong("id"),
+                        formatTimestamp(rs.getTimestamp("ts")),
+                        rs.getDouble("latitude"),
+                        rs.getDouble("longitude"),
+                        rs.getBigDecimal("subtotal").doubleValue(),
+                        rs.getBigDecimal("composite_tax_rate").doubleValue(),
+                        rs.getBigDecimal("tax_amount").doubleValue(),
+                        rs.getBigDecimal("total_amount").doubleValue()
+                ),
+                appendPagination(params, safePerPage, offset)
+        );
+
+        PageData<OrderResponse> result = new PageData<>();
+        result.setData(data);
+        result.setTotalElements(totalElements == null ? 0 : totalElements);
+        return result;
+    }
+
+    private Object[] appendPagination(Object[] params, int limit, int offset) {
+        Object[] paginatedParams = new Object[params.length + 2];
+        System.arraycopy(params, 0, paginatedParams, 0, params.length);
+        paginatedParams[params.length] = limit;
+        paginatedParams[params.length + 1] = offset;
+        return paginatedParams;
+    }
+
+    private String formatTimestamp(Timestamp timestamp) {
+        LocalDateTime value = timestamp.toLocalDateTime();
+        return ORDER_TIMESTAMP_FORMAT.format(value);
     }
 }

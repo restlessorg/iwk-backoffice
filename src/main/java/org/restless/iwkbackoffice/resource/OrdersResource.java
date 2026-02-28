@@ -2,15 +2,19 @@ package org.restless.iwkbackoffice.resource;
 
 import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
-import org.restless.iwkbackoffice.domain.response.FilterLimits;
-import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
-import org.restless.iwkbackoffice.domain.response.OrdersImportResponse;
+import org.restless.iwkbackoffice.domain.request.OrdersFilter;
+import org.restless.iwkbackoffice.domain.response.*;
 import org.restless.iwkbackoffice.service.ImportService;
 import org.restless.iwkbackoffice.service.OrderService;
+import org.restless.iwkbackoffice.util.Range;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 @RestController
 @RequiredArgsConstructor
@@ -18,6 +22,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class OrdersResource {
     private final ImportService importService;
     private final OrderService orderService;
+
+    private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     @PostMapping(
             path = "/import",
@@ -39,5 +45,32 @@ public class OrdersResource {
     @GetMapping("/filterlimits")
     public ResponseEntity<FilterLimits> getFilterLimits() {
         return ResponseEntity.ok(orderService.getFilterLimits());
+    }
+
+    @GetMapping
+    public ResponseEntity<PageData<OrderResponse>> findOrders(
+            @RequestParam int page, @RequestParam int perPage,
+            @RequestParam String query, @RequestParam String date,
+            @RequestParam String subTotal, @RequestParam String taxAmount,
+            @RequestParam String taxRate, @RequestParam String totalAmount
+    ) {
+        String[] dates = date.split(",");
+        LocalDate dateFrom = LocalDate.parse(dates[0], FORMAT);
+        LocalDate dateTo = LocalDate.parse(dates[1], FORMAT);
+
+        Double[] subTotals = Arrays.stream(subTotal.split(",")).map(Double::valueOf).toArray(Double[]::new);
+        Double[] taxAmounts = Arrays.stream(taxAmount.split(",")).map(Double::valueOf).toArray(Double[]::new);
+        Double[] taxRates = Arrays.stream(taxRate.split(",")).map(Double::valueOf).toArray(Double[]::new);
+        Double[] totalAmounts = Arrays.stream(totalAmount.split(",")).map(Double::valueOf).toArray(Double[]::new);
+
+        OrdersFilter ordersFilter = new OrdersFilter(
+                query, new Range<>(dateFrom, dateTo),
+                new Range<>(subTotals[0], subTotals[1]), new Range<>(taxAmounts[0], taxAmounts[1]),
+                new Range<>(taxRates[0], taxRates[1]), new Range<>(totalAmounts[0], totalAmounts[1])
+        );
+
+        PageData<OrderResponse> orders = orderService.findOrders(ordersFilter, page, perPage);
+
+        return ResponseEntity.ok(orders);
     }
 }
