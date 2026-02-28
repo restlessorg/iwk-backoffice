@@ -152,8 +152,8 @@ public class OrderJdbcRepository {
 
     public PageData<OrderResponse> findOrders(OrdersFilter filter, int page, int perPage) {
         int safePerPage = Math.max(perPage, 1);
-        int safePage = Math.max(page, 1);
-        int offset = (safePage - 1) * safePerPage;
+        int safePage = Math.max(page, 0);
+        int offset = safePage * safePerPage;
 
         String baseQuery = """
                 FROM orders o
@@ -204,7 +204,7 @@ public class OrderJdbcRepository {
                                od.tax_amount,
                                od.total_amount
                         """ + baseQuery + """
-                        ORDER BY o.ts DESC, o.id DESC
+                        ORDER BY o.id
                         LIMIT ? OFFSET ?
                         """,
                 (rs, rowNum) -> new OrderResponse(
