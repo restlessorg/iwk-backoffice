@@ -23,7 +23,7 @@ public class OrdersResource {
     private final ImportService importService;
     private final OrderService orderService;
 
-    private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+    private static final DateTimeFormatter FORMAT = DateTimeFormatter.ofPattern("MM-dd-yyyy");
 
     @PostMapping(
             path = "/import",
@@ -54,9 +54,9 @@ public class OrdersResource {
             @RequestParam String subTotal, @RequestParam String taxAmount,
             @RequestParam String taxRate, @RequestParam String totalAmount
     ) {
-        String[] dates = date.split(",");
-        LocalDate dateFrom = LocalDate.parse(dates[0], FORMAT);
-        LocalDate dateTo = LocalDate.parse(dates[1], FORMAT);
+        String[] dates = date.split(",", -1);
+        LocalDate dateFrom = parseDateBound(dates, 0);
+        LocalDate dateTo = parseDateBound(dates, 1);
 
         Double[] subTotals = Arrays.stream(subTotal.split(",")).map(Double::valueOf).toArray(Double[]::new);
         Double[] taxAmounts = Arrays.stream(taxAmount.split(",")).map(Double::valueOf).toArray(Double[]::new);
@@ -72,5 +72,13 @@ public class OrdersResource {
         PageData<OrderResponse> orders = orderService.findOrders(ordersFilter, page, perPage);
 
         return ResponseEntity.ok(orders);
+    }
+
+    private LocalDate parseDateBound(String[] dates, int index) {
+        if (dates.length <= index || dates[index].isBlank()) {
+            return null;
+        }
+
+        return LocalDate.parse(dates[index], FORMAT);
     }
 }
