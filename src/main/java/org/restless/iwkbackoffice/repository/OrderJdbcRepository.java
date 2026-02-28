@@ -7,6 +7,7 @@ import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
 import org.restless.iwkbackoffice.domain.response.OrderResponse;
 import org.restless.iwkbackoffice.domain.response.PageData;
+import org.restless.iwkbackoffice.exception.BadRequestException;
 import org.restless.iwkbackoffice.service.ImportService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -68,7 +69,7 @@ public class OrderJdbcRepository {
         }, order.getId(), order.getLongitude(), order.getLatitude());
 
         if (jurisdictionDetails.isEmpty()) {
-            throw new IllegalStateException("No tax jurisdiction found for order coordinates");
+            throw new BadRequestException("No tax jurisdiction found for order coordinates");
         }
 
         jdbcTemplate.update(

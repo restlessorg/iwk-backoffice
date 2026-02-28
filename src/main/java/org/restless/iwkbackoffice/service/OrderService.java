@@ -5,6 +5,7 @@ import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.response.*;
+import org.restless.iwkbackoffice.exception.NotFoundException;
 import org.restless.iwkbackoffice.repository.OrderJdbcRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -40,7 +41,7 @@ public class OrderService {
     public OrderDetailsResponse getById(Long id) {
         OrderDetailsResponse order = repository.getById(id);
         if (order == null) {
-            throw new ResponseStatusException(NOT_FOUND, "Order not found: " + id);
+            throw new NotFoundException("Order %d not found".formatted(id));
         }
         return order;
     }

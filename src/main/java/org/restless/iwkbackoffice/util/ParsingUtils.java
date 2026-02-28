@@ -1,6 +1,7 @@
 package org.restless.iwkbackoffice.util;
 
 import lombok.experimental.UtilityClass;
+import org.restless.iwkbackoffice.exception.BadRequestException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,35 +21,34 @@ public class ParsingUtils {
 
     public static Double parseDoubleRequired(String raw, String field) {
         String s = raw == null ? "" : raw.trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Missing required field: " + field);
+        if (s.isEmpty()) throw new BadRequestException("Missing required field: " + field);
         try {
             return Double.parseDouble(s);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid " + field + ": " + raw, e);
+            throw new BadRequestException("Invalid " + field + ": " + raw);
         }
     }
 
     public static LocalDateTime parseTimestampRequired(String raw, String field) {
         String s = raw == null ? "" : raw.trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Missing required field: " + field);
+        if (s.isEmpty()) throw new BadRequestException("Missing required field: " + field);
 
         try {
             return LocalDateTime.parse(s, TS_FORMATTER);
         } catch (Exception e) {
-            throw new IllegalArgumentException(
-                    "Invalid " + field + ": " + raw + " (expected 'yyyy-MM-dd HH:mm:ss[.fffffffff]')",
-                    e
+            throw new BadRequestException(
+                    "Invalid " + field + ": " + raw + " (expected 'yyyy-MM-dd HH:mm:ss[.fffffffff]')"
             );
         }
     }
 
     public static BigDecimal parseBigDecimalRequired(String raw, String field) {
         String s = raw == null ? "" : raw.trim();
-        if (s.isEmpty()) throw new IllegalArgumentException("Missing required field: " + field);
+        if (s.isEmpty()) throw new BadRequestException("Missing required field: " + field);
         try {
             return new BigDecimal(s);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid " + field + ": " + raw, e);
+            throw new BadRequestException("Invalid " + field + ": " + raw);
         }
     }
 }
