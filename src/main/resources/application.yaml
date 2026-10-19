@@ -6,7 +6,7 @@ spring:
     import: optional:file:.env[.properties]
 
   datasource:
-    url: jdbc:postgresql://${PG_HOST}:${PG_PORT}/${PG_DB}?sslmode=require&channelBinding=require
+    url: jdbc:postgresql://${PG_HOST}:${PG_PORT}/${PG_DB}
     username: ${PG_DBUSER}
     password: ${PG_DBPASS}
     driver-class-name: org.postgresql.Driver
