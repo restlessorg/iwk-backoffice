@@ -32,6 +32,19 @@ class OrdersFilterParserTest {
     }
 
     @Test
+    void treatsMissingFiltersAsUnbounded() {
+        OrdersFilter filter = parser.parse(null, null, null, null, null, null);
+
+        assertThat(filter.query()).isEmpty();
+        assertThat(filter.date().from()).isNull();
+        assertThat(filter.date().to()).isNull();
+        assertThat(filter.subTotal().from()).isNull();
+        assertThat(filter.taxAmount().to()).isNull();
+        assertThat(filter.taxRate().from()).isNull();
+        assertThat(filter.totalAmount().to()).isNull();
+    }
+
+    @Test
     void rejectsMalformedNumericRanges() {
         assertThatThrownBy(() -> parser.parse("", ",", "1", "0,1", "0,1", "0,1"))
                 .isInstanceOf(BadRequestException.class)

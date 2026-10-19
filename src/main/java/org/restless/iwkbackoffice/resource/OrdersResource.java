@@ -54,9 +54,9 @@ public class OrdersResource {
     @GetMapping
     public ResponseEntity<PageData<OrderResponse>> findOrders(
             @RequestParam int page, @RequestParam int perPage,
-            @RequestParam String query, @RequestParam String date,
-            @RequestParam String subTotal, @RequestParam String taxAmount,
-            @RequestParam String taxRate, @RequestParam String totalAmount
+            @RequestParam(required = false) String query, @RequestParam(required = false) String date,
+            @RequestParam(required = false) String subTotal, @RequestParam(required = false) String taxAmount,
+            @RequestParam(required = false) String taxRate, @RequestParam(required = false) String totalAmount
     ) {
         ordersFilterParser.validatePagination(page, perPage);
         OrdersFilter ordersFilter = ordersFilterParser.parse(query, date, subTotal, taxAmount, taxRate, totalAmount);

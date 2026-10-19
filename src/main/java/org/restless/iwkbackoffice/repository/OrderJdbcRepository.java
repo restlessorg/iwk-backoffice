@@ -13,6 +13,7 @@ import org.restless.iwkbackoffice.domain.tax.JurisdictionDetails;
 import org.restless.iwkbackoffice.domain.tax.JurisdictionType;
 import org.restless.iwkbackoffice.exception.BadRequestException;
 import org.restless.iwkbackoffice.service.OrderTaxCalculator;
+import org.restless.iwkbackoffice.util.Range;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -239,22 +240,11 @@ public class OrderJdbcRepository {
             params.add(Timestamp.valueOf(filter.date().to().atTime(LocalTime.MAX)));
         }
 
-        baseQuery.append("""
-                
-                  AND o.subtotal BETWEEN ? AND ?
-                  AND od.tax_amount BETWEEN ? AND ?
-                  AND od.composite_tax_rate BETWEEN ? AND ?
-                  AND od.total_amount BETWEEN ? AND ?
-                """);
-
-        params.add(filter.subTotal().from());
-        params.add(filter.subTotal().to());
-        params.add(filter.taxAmount().from());
-        params.add(filter.taxAmount().to());
-        params.add(filter.taxRate().from());
-        params.add(filter.taxRate().to());
-        params.add(filter.totalAmount().from());
-        params.add(filter.totalAmount().to());
+        appendBetween(baseQuery, params, "o.subtotal", filter.subTotal());
+        appendBetween(baseQuery, params, "od.tax_amount", filter.taxAmount());
+        appendBetween(baseQuery, params, "od.composite_tax_rate", filter.taxRate());
+        appendBetween(baseQuery, params, "od.total_amount", filter.totalAmount());
+        baseQuery.append("\n");
 
         Integer totalElements = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) " + baseQuery,
@@ -297,6 +287,15 @@ public class OrderJdbcRepository {
         paginatedParams.add(limit);
         paginatedParams.add(offset);
         return paginatedParams.toArray();
+    }
+
+    private void appendBetween(StringBuilder query, List<Object> params, String column, Range<BigDecimal> range) {
+        if (range.from() == null || range.to() == null) {
+            return;
+        }
+        query.append("\n  AND ").append(column).append(" BETWEEN ? AND ?");
+        params.add(range.from());
+        params.add(range.to());
     }
 
     private String formatTimestamp(Timestamp timestamp) {

@@ -46,20 +46,24 @@ public class OrdersFilterParser {
     }
 
     private Range<LocalDate> parseDateRange(String raw, String field) {
+        if (raw == null) {
+            return new Range<>(null, null);
+        }
+
         String[] bounds = splitRange(raw, field);
         return new Range<>(parseDateBound(bounds[0], field), parseDateBound(bounds[1], field));
     }
 
     private Range<BigDecimal> parseDecimalRange(String raw, String field) {
+        if (raw == null) {
+            return new Range<>(null, null);
+        }
+
         String[] bounds = splitRange(raw, field);
         return new Range<>(parseDecimalBound(bounds[0], field), parseDecimalBound(bounds[1], field));
     }
 
     private String[] splitRange(String raw, String field) {
-        if (raw == null) {
-            throw new BadRequestException("Missing required filter: " + field);
-        }
-
         String[] bounds = raw.split(",", -1);
         if (bounds.length != 2) {
             throw new BadRequestException("Invalid " + field + " range, expected 'from,to'");
