@@ -485,6 +485,19 @@ Examples:
 - `0.01,100.00`
 - `4.00,8.88`
 
+`sort` (optional)
+
+- format `field` or `field,direction`
+- `field` is one of `id`, `timestamp`, `subTotal`, `taxRate`, `taxAmount`, `totalAmount` (case-insensitive)
+- `direction` is `asc` or `desc` (case-insensitive), defaults to `asc`
+- when omitted, results are sorted by `id,asc`
+- ties are broken by `id` in the same direction
+
+Examples:
+
+- `totalAmount,desc`
+- `timestamp`
+
 Pagination rules:
 
 - `page >= 0`

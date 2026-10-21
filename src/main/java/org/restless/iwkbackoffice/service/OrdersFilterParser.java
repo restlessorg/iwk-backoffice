@@ -1,6 +1,7 @@
 package org.restless.iwkbackoffice.service;
 
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
+import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.exception.BadRequestException;
 import org.restless.iwkbackoffice.util.Range;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Component
 public class OrdersFilterParser {
@@ -30,6 +33,36 @@ public class OrdersFilterParser {
                 parseDecimalRange(taxRate, "taxRate"),
                 parseDecimalRange(totalAmount, "totalAmount")
         );
+    }
+
+    public OrdersSort parseSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return OrdersSort.DEFAULT;
+        }
+
+        String[] parts = sort.split(",", -1);
+        if (parts.length > 2) {
+            throw new BadRequestException("Invalid sort, expected 'field' or 'field,asc|desc'");
+        }
+
+        OrdersSort.Field field = OrdersSort.Field.fromApiName(parts[0].trim())
+                .orElseThrow(() -> new BadRequestException("Invalid sort field: " + parts[0].trim()
+                        + ", expected one of " + Arrays.stream(OrdersSort.Field.values())
+                        .map(OrdersSort.Field::apiName)
+                        .collect(Collectors.joining(", "))));
+
+        if (parts.length == 1 || parts[1].isBlank()) {
+            return new OrdersSort(field, OrdersSort.Direction.ASC);
+        }
+
+        String direction = parts[1].trim();
+        if (direction.equalsIgnoreCase("asc")) {
+            return new OrdersSort(field, OrdersSort.Direction.ASC);
+        }
+        if (direction.equalsIgnoreCase("desc")) {
+            return new OrdersSort(field, OrdersSort.Direction.DESC);
+        }
+        throw new BadRequestException("Invalid sort direction: " + direction + ", expected 'asc' or 'desc'");
     }
 
     public void validatePagination(int page, int perPage) {

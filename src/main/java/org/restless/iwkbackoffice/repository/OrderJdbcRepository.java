@@ -3,6 +3,7 @@ package org.restless.iwkbackoffice.repository;
 import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
+import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
 import org.restless.iwkbackoffice.domain.response.OrderLocation;
@@ -217,7 +218,7 @@ public class OrderJdbcRepository {
         );
     }
 
-    public PageData<OrderResponse> findOrders(OrdersFilter filter, int page, int perPage) {
+    public PageData<OrderResponse> findOrders(OrdersFilter filter, OrdersSort sort, int page, int perPage) {
         int safePerPage = Math.max(perPage, 1);
         int safePage = Math.max(page, 0);
         int offset = safePage * safePerPage;
@@ -266,8 +267,7 @@ public class OrderJdbcRepository {
                                od.composite_tax_rate,
                                od.tax_amount,
                                od.total_amount
-                        """ + baseQuery + """
-                        ORDER BY o.id
+                        """ + baseQuery + orderByClause(sort) + """
                         LIMIT ? OFFSET ?
                         """,
                 (rs, rowNum) -> new OrderResponse(
@@ -284,6 +284,21 @@ public class OrderJdbcRepository {
         );
 
         return new PageData<>(data, totalElements == null ? 0 : totalElements);
+    }
+
+    private String orderByClause(OrdersSort sort) {
+        String column = switch (sort.field()) {
+            case ID -> "o.id";
+            case TIMESTAMP -> "o.ts";
+            case SUB_TOTAL -> "o.subtotal";
+            case TAX_RATE -> "od.composite_tax_rate";
+            case TAX_AMOUNT -> "od.tax_amount";
+            case TOTAL_AMOUNT -> "od.total_amount";
+        };
+        String direction = sort.direction().name();
+        return sort.field() == OrdersSort.Field.ID
+                ? ("ORDER BY o.id " + sort.direction() + "\n")
+                : ("ORDER BY " + column + " " + direction + ", o.id " + direction + "\n");
     }
 
     private Object[] appendPagination(List<Object> params, int limit, int offset) {
