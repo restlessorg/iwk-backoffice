@@ -2,6 +2,7 @@ package org.restless.iwkbackoffice.service;
 
 import org.junit.jupiter.api.Test;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
+import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.exception.BadRequestException;
 
 import java.math.BigDecimal;
@@ -49,6 +50,32 @@ class OrdersFilterParserTest {
         assertThatThrownBy(() -> parser.parse("", ",", "1", "0,1", "0,1", "0,1"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Invalid subTotal range, expected 'from,to'");
+    }
+
+    @Test
+    void defaultsSortToIdAscending() {
+        assertThat(parser.parseSort(null)).isEqualTo(OrdersSort.DEFAULT);
+        assertThat(parser.parseSort(" ")).isEqualTo(OrdersSort.DEFAULT);
+    }
+
+    @Test
+    void parsesSortFieldAndDirection() {
+        assertThat(parser.parseSort("totalAmount,desc"))
+                .isEqualTo(new OrdersSort(OrdersSort.Field.TOTAL_AMOUNT, OrdersSort.Direction.DESC));
+        assertThat(parser.parseSort("timestamp"))
+                .isEqualTo(new OrdersSort(OrdersSort.Field.TIMESTAMP, OrdersSort.Direction.ASC));
+        assertThat(parser.parseSort("subtotal,ASC"))
+                .isEqualTo(new OrdersSort(OrdersSort.Field.SUB_TOTAL, OrdersSort.Direction.ASC));
+    }
+
+    @Test
+    void rejectsUnknownSortFieldOrDirection() {
+        assertThatThrownBy(() -> parser.parseSort("latitude,asc"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageStartingWith("Invalid sort field: latitude");
+        assertThatThrownBy(() -> parser.parseSort("id,up"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("Invalid sort direction: up, expected 'asc' or 'desc'");
     }
 
     @Test

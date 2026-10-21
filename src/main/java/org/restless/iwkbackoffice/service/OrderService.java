@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
+import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
 import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
@@ -41,8 +42,8 @@ public class OrderService {
         return repository.getFilterLimits();
     }
 
-    public PageData<OrderResponse> findOrders(OrdersFilter ordersFilter, int page, int perPage) {
-        return repository.findOrders(ordersFilter, page, perPage);
+    public PageData<OrderResponse> findOrders(OrdersFilter ordersFilter, OrdersSort ordersSort, int page, int perPage) {
+        return repository.findOrders(ordersFilter, ordersSort, page, perPage);
     }
 
     public OrderDetailsResponse getById(Long id) {
