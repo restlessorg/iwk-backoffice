@@ -21,6 +21,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
+    private static final String MANUAL_SOURCE = "Manual";
+
     private final OrderJdbcRepository repository;
 
     public OrderCreateResponse createOrder(OrderCreateRequest request) {
@@ -29,7 +31,8 @@ public class OrderService {
                 request.longitude(),
                 request.latitude(),
                 LocalDateTime.now(),
-                request.subTotal()
+                request.subTotal(),
+                MANUAL_SOURCE
         ));
         return new OrderCreateResponse(createdOrderId);
     }
