@@ -17,6 +17,7 @@ public record OrderDetailsResponse(
         String state,
         String county,
         String city,
-        String special
+        String special,
+        String source
 ) {
 }

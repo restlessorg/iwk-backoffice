@@ -61,9 +61,10 @@ public class ImportService {
             long processed = 0;
             long saved = 0;
             List<OrderEntity> buffer = new ArrayList<>(BATCH_SIZE);
+            String source = file.getOriginalFilename();
 
             for (CSVRecord record : parser) {
-                buffer.add(toOrder(record));
+                buffer.add(toOrder(record, source));
 
                 if (buffer.size() >= BATCH_SIZE) {
                     processed += buffer.size();
@@ -125,7 +126,7 @@ public class ImportService {
         List<OrderEntity> ordersToPersist = new ArrayList<>(orderJurisdictions.keySet());
 
         int insertedOrders = Arrays.stream(jdbcTemplate.batchUpdate(
-                "INSERT INTO orders (id,longitude,latitude,ts,subtotal) VALUES (?,?,?,?,?)",
+                "INSERT INTO orders (id,longitude,latitude,ts,subtotal,source) VALUES (?,?,?,?,?,?)",
                 new BatchPreparedStatementSetter() {
                     @Override
                     public void setValues(@NonNull PreparedStatement ps, int i) throws SQLException {
@@ -135,6 +136,7 @@ public class ImportService {
                         ps.setDouble(3, order.getLatitude());
                         ps.setTimestamp(4, Timestamp.valueOf(order.getTs()));
                         ps.setBigDecimal(5, order.getSubtotal());
+                        ps.setString(6, order.getSource());
                     }
 
                     @Override
@@ -171,12 +173,12 @@ public class ImportService {
         return insertedOrders;
     }
 
-    private OrderEntity toOrder(CSVRecord r) {
+    private OrderEntity toOrder(CSVRecord r, String source) {
         Double longitude = parseDoubleRequired(r.get(1), "longitude");
         Double latitude = parseDoubleRequired(r.get(2), "latitude");
         LocalDateTime ts = parseTimestampRequired(r.get(3), "timestamp");
         BigDecimal subtotal = parseBigDecimalRequired(r.get(4), "subTotal");
-        return new OrderEntity(longitude, latitude, ts, subtotal);
+        return new OrderEntity(longitude, latitude, ts, subtotal, source);
     }
 
     private JurisdictionDetails mapJurisdictionDetails(java.sql.ResultSet rs) throws SQLException {

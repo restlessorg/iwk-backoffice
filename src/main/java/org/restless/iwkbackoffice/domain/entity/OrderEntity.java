@@ -25,10 +25,13 @@ public class OrderEntity {
 
     private BigDecimal subtotal;
 
-    public OrderEntity(Double longitude, Double latitude, LocalDateTime ts, BigDecimal subtotal) {
+    private String source;
+
+    public OrderEntity(Double longitude, Double latitude, LocalDateTime ts, BigDecimal subtotal, String source) {
         this.longitude = longitude;
         this.latitude = latitude;
         this.ts = ts;
         this.subtotal = subtotal;
+        this.source = source;
     }
 }

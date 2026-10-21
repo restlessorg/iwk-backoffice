@@ -66,12 +66,13 @@ public class OrderJdbcRepository {
         }
 
         jdbcTemplate.update(
-                "INSERT INTO orders (id,longitude,latitude,ts,subtotal) VALUES (?,?,?,?,?)",
+                "INSERT INTO orders (id,longitude,latitude,ts,subtotal,source) VALUES (?,?,?,?,?,?)",
                 order.getId(),
                 order.getLongitude(),
                 order.getLatitude(),
                 Timestamp.valueOf(order.getTs()),
-                order.getSubtotal()
+                order.getSubtotal(),
+                order.getSource()
         );
 
         CalculatedOrderTaxes taxes = orderTaxCalculator.calculate(order.getSubtotal(), jurisdictionDetails);
@@ -122,6 +123,7 @@ public class OrderJdbcRepository {
                                o.longitude,
                                o.latitude,
                                o.subtotal,
+                               o.source,
                                od.total_amount,
                                od.composite_tax_rate,
                                od.tax_amount,
@@ -151,7 +153,8 @@ public class OrderJdbcRepository {
                         rs.getBigDecimal("state_rate").doubleValue(),
                         rs.getBigDecimal("county_rate").doubleValue(),
                         rs.getBigDecimal("city_rate").doubleValue(),
-                        rs.getBigDecimal("special_rate").doubleValue()
+                        rs.getBigDecimal("special_rate").doubleValue(),
+                        rs.getString("source")
                 ),
                 id
         );
@@ -193,7 +196,8 @@ public class OrderJdbcRepository {
                 STATE_NAME,
                 county,
                 city,
-                special
+                special,
+                prioritizedRow.source()
         );
     }
 
@@ -328,7 +332,8 @@ public class OrderJdbcRepository {
             Double stateRate,
             Double countyRate,
             Double cityRate,
-            Double specialRate
+            Double specialRate,
+            String source
     ) {
     }
 }
