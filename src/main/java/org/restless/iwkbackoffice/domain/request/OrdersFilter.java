@@ -4,6 +4,7 @@ import org.restless.iwkbackoffice.util.Range;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public record OrdersFilter(
         String query,
@@ -11,6 +12,7 @@ public record OrdersFilter(
         Range<BigDecimal> subTotal,
         Range<BigDecimal> taxAmount,
         Range<BigDecimal> taxRate,
-        Range<BigDecimal> totalAmount
+        Range<BigDecimal> totalAmount,
+        List<Long> jurisdictionIds
 ) {
 }

@@ -6,6 +6,7 @@ import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
+import org.restless.iwkbackoffice.domain.response.JurisdictionOption;
 import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
 import org.restless.iwkbackoffice.domain.response.OrderLocation;
@@ -52,16 +53,23 @@ public class OrdersResource {
         return ResponseEntity.ok(orderService.getFilterLimits());
     }
 
+    @GetMapping("/jurisdictions")
+    public ResponseEntity<List<JurisdictionOption>> getJurisdictions() {
+        return ResponseEntity.ok(orderService.getJurisdictions());
+    }
+
     @GetMapping
     public ResponseEntity<PageData<OrderResponse>> findOrders(
             @RequestParam int page, @RequestParam int perPage,
             @RequestParam(required = false) String query, @RequestParam(required = false) String date,
             @RequestParam(required = false) String subTotal, @RequestParam(required = false) String taxAmount,
             @RequestParam(required = false) String taxRate, @RequestParam(required = false) String totalAmount,
-            @RequestParam(required = false) String sort
+            @RequestParam(required = false) String jurisdictions, @RequestParam(required = false) String sort
     ) {
         ordersFilterParser.validatePagination(page, perPage);
-        OrdersFilter ordersFilter = ordersFilterParser.parse(query, date, subTotal, taxAmount, taxRate, totalAmount);
+        OrdersFilter ordersFilter = ordersFilterParser.parse(
+                query, date, subTotal, taxAmount, taxRate, totalAmount, jurisdictions
+        );
         OrdersSort ordersSort = ordersFilterParser.parseSort(sort);
         return ResponseEntity.ok(orderService.findOrders(ordersFilter, ordersSort, page, perPage));
     }
