@@ -5,6 +5,7 @@ import org.restless.iwkbackoffice.domain.entity.OrderEntity;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
+import org.restless.iwkbackoffice.domain.response.JurisdictionOption;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
 import org.restless.iwkbackoffice.domain.response.OrderLocation;
 import org.restless.iwkbackoffice.domain.response.OrderResponse;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Repository
@@ -112,6 +114,23 @@ public class OrderJdbcRepository {
                         List.of(rs.getBigDecimal("mintaxamount").doubleValue(), rs.getBigDecimal("maxtaxamount").doubleValue()),
                         List.of(rs.getBigDecimal("mintaxrate").doubleValue(), rs.getBigDecimal("maxtaxrate").doubleValue()),
                         List.of(rs.getBigDecimal("mintotalamount").doubleValue(), rs.getBigDecimal("maxtotalamount").doubleValue())
+                )
+        );
+    }
+
+    public List<JurisdictionOption> getJurisdictions() {
+        return jdbcTemplate.query(
+                """
+                        SELECT j.id,
+                               j.name,
+                               j.type
+                        FROM tax_jurisdictions j
+                        ORDER BY j.name, j.type
+                        """,
+                (rs, rowNum) -> new JurisdictionOption(
+                        rs.getLong("id"),
+                        rs.getString("name"),
+                        JurisdictionType.valueOf(rs.getString("type"))
                 )
         );
     }
@@ -249,6 +268,7 @@ public class OrderJdbcRepository {
         appendBetween(baseQuery, params, "od.tax_amount", filter.taxAmount());
         appendBetween(baseQuery, params, "od.composite_tax_rate", filter.taxRate());
         appendBetween(baseQuery, params, "od.total_amount", filter.totalAmount());
+        appendJurisdictions(baseQuery, params, filter.jurisdictionIds());
         baseQuery.append("\n");
 
         Integer totalElements = jdbcTemplate.queryForObject(
@@ -315,6 +335,15 @@ public class OrderJdbcRepository {
         query.append("\n  AND ").append(column).append(" BETWEEN ? AND ?");
         params.add(range.from());
         params.add(range.to());
+    }
+
+    private void appendJurisdictions(StringBuilder query, List<Object> params, List<Long> jurisdictionIds) {
+        if (jurisdictionIds.isEmpty()) {
+            return;
+        }
+        String placeholders = String.join(",", Collections.nCopies(jurisdictionIds.size(), "?"));
+        query.append("\n  AND od.jurisdictions && ARRAY[").append(placeholders).append("]::bigint[]");
+        params.addAll(jurisdictionIds);
     }
 
     private String formatTimestamp(Timestamp timestamp) {

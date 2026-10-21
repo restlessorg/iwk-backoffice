@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
@@ -23,7 +24,8 @@ public class OrdersFilterParser {
             String subTotal,
             String taxAmount,
             String taxRate,
-            String totalAmount
+            String totalAmount,
+            String jurisdictions
     ) {
         return new OrdersFilter(
                 normalizeQuery(query),
@@ -31,7 +33,8 @@ public class OrdersFilterParser {
                 parseDecimalRange(subTotal, "subTotal"),
                 parseDecimalRange(taxAmount, "taxAmount"),
                 parseDecimalRange(taxRate, "taxRate"),
-                parseDecimalRange(totalAmount, "totalAmount")
+                parseDecimalRange(totalAmount, "totalAmount"),
+                parseJurisdictionIds(jurisdictions)
         );
     }
 
@@ -76,6 +79,32 @@ public class OrdersFilterParser {
 
     private String normalizeQuery(String query) {
         return query == null ? "" : query.trim();
+    }
+
+    private List<Long> parseJurisdictionIds(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+
+        return Arrays.stream(raw.split(",", -1))
+                .map(String::trim)
+                .map(this::parseJurisdictionId)
+                .distinct()
+                .toList();
+    }
+
+    private Long parseJurisdictionId(String raw) {
+        long id;
+        try {
+            id = Long.parseLong(raw);
+        } catch (NumberFormatException exception) {
+            throw new BadRequestException("Invalid jurisdiction id: " + raw);
+        }
+
+        if (id < 1) {
+            throw new BadRequestException("Invalid jurisdiction id: " + raw);
+        }
+        return id;
     }
 
     private Range<LocalDate> parseDateRange(String raw, String field) {

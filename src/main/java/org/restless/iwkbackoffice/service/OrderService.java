@@ -6,6 +6,7 @@ import org.restless.iwkbackoffice.domain.request.OrderCreateRequest;
 import org.restless.iwkbackoffice.domain.request.OrdersFilter;
 import org.restless.iwkbackoffice.domain.request.OrdersSort;
 import org.restless.iwkbackoffice.domain.response.FilterLimits;
+import org.restless.iwkbackoffice.domain.response.JurisdictionOption;
 import org.restless.iwkbackoffice.domain.response.OrderCreateResponse;
 import org.restless.iwkbackoffice.domain.response.OrderDetailsResponse;
 import org.restless.iwkbackoffice.domain.response.OrderLocation;
@@ -40,6 +41,10 @@ public class OrderService {
 
     public FilterLimits getFilterLimits() {
         return repository.getFilterLimits();
+    }
+
+    public List<JurisdictionOption> getJurisdictions() {
+        return repository.getJurisdictions();
     }
 
     public PageData<OrderResponse> findOrders(OrdersFilter ordersFilter, OrdersSort ordersSort, int page, int perPage) {

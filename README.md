@@ -20,7 +20,7 @@ This service supports a backoffice workflow around order ingestion and tax inspe
 - Imports orders from CSV files in batches
 - Resolves tax jurisdiction coverage from longitude/latitude coordinates
 - Calculates composite tax rate, tax amount, and total amount
-- Exposes paginated order search with numeric/date filters
+- Exposes paginated order search with numeric/date/jurisdiction filters
 - Returns order details and map coordinates for UI consumption
 - Seeds jurisdiction geometry data from the bundled `jurisdictions.json` resource
 
@@ -227,6 +227,10 @@ Important details:
 - polygon geometries are normalized to multipolygons when needed
 - startup import is skipped if `tax_jurisdictions` already contains rows
 
+### `V6__index-order-jurisdictions.sql`
+
+Adds a GIN index on `order_details.jurisdictions` to support the jurisdiction filter on the order list.
+
 ## Tax Calculation Rules
 
 Tax calculation is performed in `OrderTaxCalculator`.
@@ -412,7 +416,28 @@ Example request:
 curl http://localhost:8080/orders/filterlimits
 ```
 
-### 4. Search Orders
+### 4. List Jurisdictions
+
+`GET /orders/jurisdictions`
+
+Returns all tax jurisdictions, sorted by name, for use as options in the order list jurisdiction filter. Names are not unique across types (e.g. `Oneida` exists as both a `COUNTY` and a `CITY`), so filter by `id`.
+
+Example response:
+
+```json
+[
+  { "id": 1, "name": "Albany", "type": "COUNTY" },
+  { "id": 3, "name": "Auburn", "type": "CITY" }
+]
+```
+
+Example request:
+
+```bash
+curl http://localhost:8080/orders/jurisdictions
+```
+
+### 5. Search Orders
 
 `GET /orders`
 
@@ -485,6 +510,18 @@ Examples:
 - `0.01,100.00`
 - `4.00,8.88`
 
+`jurisdictions` (optional)
+
+- comma-separated list of jurisdiction ids from `GET /orders/jurisdictions`
+- an order matches if any of its resolved jurisdictions is in the list
+- blank or omitted disables jurisdiction filtering
+- each id must be a positive integer; unknown ids simply match no orders
+
+Examples:
+
+- `12`
+- `12,40`
+
 `sort` (optional)
 
 - format `field` or `field,direction`
@@ -503,7 +540,7 @@ Pagination rules:
 - `page >= 0`
 - `perPage >= 1`
 
-### 5. Get Order Details
+### 6. Get Order Details
 
 `GET /orders/{id}`
 
@@ -544,7 +581,7 @@ Example request:
 curl http://localhost:8080/orders/123
 ```
 
-### 6. Get Order Map Coordinates
+### 7. Get Order Map Coordinates
 
 `GET /orders/map`
 
